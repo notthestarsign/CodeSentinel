@@ -4,6 +4,10 @@ import os
 import json
 from dotenv import load_dotenv
 load_dotenv()
+from fastapi import FastAPI, File, HTTPException, Form, UploadFile
+import tempfile, zipfile, subprocess
+
+app = FastAPI(title="CodeSentinel", description="AI-Powered Code Review Assistant", version="1.0")
 
 SUPPORTED_EXTENSIONS = {
     '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.c', '.cpp', 
@@ -140,3 +144,61 @@ async def analyze_with_ai(files: dict[str, str]) -> dict:
     result = json.loads(raw)
     result["files_reviewed"] = list(files.keys())
     return result
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.post("/analyze/upload")
+async def analyze_upload(file: UploadFile = File(...)):
+    """Accept a zip file of code and analyze it."""
+    if not file.filename.endswith(".zip"):
+        raise HTTPException(400, "Please upload a .zip file")
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        zip_path = os.path.join(tmpdir, "upload.zip")
+        content = await file.read()
+        with open(zip_path, "wb") as f:
+            f.write(content)
+            
+        extract_dir = os.path.join(tmpdir, "code")
+        os.makedirs(extract_dir)
+        with zipfile.ZipFile(zip_path, "r") as z:
+            z.extractall(extract_dir)
+            
+        files = collect_code_files(extract_dir)
+        if not files:
+            raise HTTPException(400, "No supported code files found in the zip file.")
+        
+        result = await analyze_with_ai(files)
+        return result
+    
+@app.post("/analyze/github")
+async def analyze_github(url: str = Form(...)):
+    """Clone a public Github repo and analyze it."""
+    if "github.com" not in url:
+        raise HTTPException(400, "Please provide a valid Github URL.")
+    
+    #normalize url
+    url = url.strip().rstrip("/")
+    if not url.endswith(".git"):
+        clone_url = url + ".git"
+    else:
+        clone_url = url
+        
+    with tempfile.TemporaryDirectory() as tmpdir:
+        clone_dir = os.path.join(tmpdir, "repo")
+        result = subprocess.run(
+            ["git", "clone", "--depth=1", "--single-branch", clone_url, clone_dir],
+            capture_output=True, text=True, timeout=60
+        )
+        if result.returncode != 0:
+            raise HTTPException(400, f"Failed to clone repo: {result.stderr[:200]}")
+        
+        files = collect_code_files(clone_dir)
+        if not files:
+            raise HTTPException(400, "No supported code files found in the repository.")
+        
+        analysis = await analyze_with_ai(files)
+        analysis["repo_url"] = url
+        return analysis
