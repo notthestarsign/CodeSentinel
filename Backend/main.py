@@ -1,0 +1,142 @@
+from pathlib import Path
+from groq import Groq
+import os
+import json
+from dotenv import load_dotenv
+load_dotenv()
+
+SUPPORTED_EXTENSIONS = {
+    '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.c', '.cpp', 
+    '.h', '.cs', '.go', '.rb', '.php', '.html', '.css', '.scss', 
+    '.json', '.yaml', '.yml', '.md', '.txt', '.rs', '.swift', 
+    '.kt', '.vue', '.sql', '.sh', '.toml'
+}
+
+MAX_FILES = 30
+MAX_FILE_SIZE = 50_000
+MAX_TOTAL_CHARS = 80_000
+
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+def collect_code_files(directory: str) -> dict[str, str]:
+    files = {}
+    base = Path(directory)
+    skip_dir = {'.git', 'node_modules', '__pycache__', ".venv", "venv", "dist", "build", ".next"}
+    
+    for path in sorted(base.rglob("*")):
+        if any(skip in path.parts for skip in skip_dir):
+            continue
+        if path.is_file() and path.suffix in SUPPORTED_EXTENSIONS:
+            try:
+                content = path.read_text(encoding='utf-8', errors="ignore")
+                if len(content) <= MAX_FILE_SIZE:
+                    rel = str(path.relative_to(base))
+                    files[rel] = content
+                    if len(files) >= MAX_FILES:
+                        break
+            except Exception:
+                pass
+    return files
+
+def build_analysis_prompt(files: dict[str, str]) -> str:
+    total = 0
+    code_sections = []
+    for filename, content in files.items():
+        snippet = content[:3000] if len(content) > 3000 else content
+        section = f"### FILE: {filename}\n```\n{snippet}\n```\n"
+        if total + len(section) > MAX_TOTAL_CHARS:
+            break
+        code_sections.append(section)
+        total += len(section)
+
+    code_block = "\n".join(code_sections)
+
+    return f"""You are an expert senior software engineer performing a comprehensive code review.
+        Analyze the following codebase carefully and return a JSON object with this EXACT structure (no markdown, no explanation — pure JSON only):
+
+        {{
+        "summary": "2-3 sentence overview of what the codebase does and its overall quality",
+        "overall_score": <integer 0-100>,
+        "grade": "<A+|A|A-|B+|B|B-|C+|C|C-|D|F>",
+        "stats": {{
+            "files_analyzed": <int>,
+            "total_issues": <int>,
+            "critical_count": <int>,
+            "warning_count": <int>,
+            "info_count": <int>
+        }},
+        "bug_risks": [
+            {{
+            "severity": "<critical|warning|info>",
+            "file": "<filename or 'General'>",
+            "line_hint": "<line number or range if identifiable, else null>",
+            "title": "<short issue title>",
+            "description": "<detailed explanation>",
+            "fix": "<concrete fix suggestion>"
+            }}
+        ],
+        "security_concerns": [
+            {{
+            "severity": "<critical|warning|info>",
+            "file": "<filename or 'General'>",
+            "cwe": "<CWE-XXX or null>",
+            "title": "<short title>",
+            "description": "<detailed explanation>",
+            "fix": "<concrete fix>"
+            }}
+        ],
+        "complexity_warnings": [
+            {{
+            "severity": "<warning|info>",
+            "file": "<filename>",
+            "title": "<title>",
+            "description": "<explanation>",
+            "fix": "<suggestion>"
+            }}
+        ],
+        "refactoring_suggestions": [
+            {{
+            "priority": "<high|medium|low>",
+            "file": "<filename or 'General'>",
+            "title": "<suggestion title>",
+            "description": "<detailed description>",
+            "benefit": "<why this improves the code>"
+            }}
+        ],
+        "positive_highlights": [
+            "<thing done well>",
+            "<thing done well>"
+        ],
+        "tech_stack": ["<detected technology>"],
+        "maintainability_score": <0-100>,
+        "security_score": <0-100>,
+        "performance_score": <0-100>,
+        "test_coverage_note": "<observation about testing>"
+        }}
+
+        Return ONLY the JSON. No preamble. No explanation. No markdown fences.
+
+        --- CODEBASE START ---
+        {code_block}
+        --- CODEBASE END ---
+    """
+
+async def analyze_with_ai(files: dict[str, str]) -> dict:
+    prompt = build_analysis_prompt(files)
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=4000,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    raw = raw.strip().rstrip("```").strip()
+
+    result = json.loads(raw)
+    result["files_reviewed"] = list(files.keys())
+    return result
