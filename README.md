@@ -1,4 +1,4 @@
-# AI Code Review Assistant
+# CodeSentinel — AI-Powered Code Review Assistant
 
 An AI-powered code review tool that analyzes GitHub repositories or uploaded codebases
 and produces professional reports covering bug risks, security vulnerabilities, complexity
@@ -8,11 +8,9 @@ warnings, and refactoring suggestions.
 
 | Layer | Technology |
 |-------|-----------|
-| AI Analysis | |
-| Backend API | |
-| PDF Reports | |
-| Repo cloning | |
-| Frontend | |
+| AI Analysis | Groq API · Llama 3.3 70B |
+| Backend API | Python · FastAPI · Uvicorn |
+| Repo cloning | Git (subprocess) |
 
 ---
 
@@ -22,38 +20,62 @@ warnings, and refactoring suggestions.
 
 - Python 3.10+
 - Git installed and on PATH
+- A Groq API key — get one free at https://console.groq.com
 
 ### 2. Clone & install
 
 ```bash
 git clone <this-repo>
+cd CodeSentinel/Backend
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ### 3. Set your API key
 
+Create a `.env` file inside `Backend/`:
+
+```bash
+GROQ_API_KEY=gsk_...your_key_here...
+```
 
 ### 4. Start the server
 
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+The API is now live at **http://localhost:8000**.  
+Interactive docs: **http://localhost:8000/docs**
 
 ---
 
 ## API Endpoints
 
+### `GET /health`
+Health check.
+
+```bash
+curl http://localhost:8000/health
+# {"status": "healthy"}
+```
+
 ### `POST /analyze/github`
 Analyze a public GitHub repository.
 
+```bash
+curl -X POST http://localhost:8000/analyze/github \
+  -F "url=https://github.com/owner/repo"
+```
 
 ### `POST /analyze/upload`
 Analyze an uploaded `.zip` archive of code.
 
-
-### `POST /report/pdf`
-Generate a PDF report from analysis JSON.
-
-
-### `GET /health`
-Health check — returns `{"status": "ok"}`.
+```bash
+curl -X POST http://localhost:8000/analyze/upload \
+  -F "file=@myproject.zip"
+```
 
 ---
 
@@ -86,23 +108,14 @@ Health check — returns `{"status": "ok"}`.
 
 ---
 
-## Frontend
-
-The React frontend (`code-review-frontend.jsx`) is a self-contained component.
-
-**To use it:**
-
-
----
-
 ## Limits & Notes
 
 | Constraint | Value |
 |-----------|-------|
-| Max files per analysis | |
-| Max file size | |
-| Max total chars sent to AI | |
-| Supported extensions | |
+| Max files per analysis | 30 |
+| Max file size | 50 KB per file |
+| Max total chars sent to AI | 80,000 |
+| Supported extensions | `.py .js .ts .jsx .tsx .java .c .cpp .h .cs .go .rb .php .html .css .scss .json .yaml .yml .md .txt .rs .swift .kt .vue .sql .sh .toml` |
 | GitHub repos | Public only (no auth) |
 
 ---
@@ -111,6 +124,8 @@ The React frontend (`code-review-frontend.jsx`) is a self-contained component.
 
 - [ ] GitHub OAuth + private repo support
 - [ ] Post review comments directly to Pull Requests via GitHub API
+- [ ] PDF report generation
+- [ ] React frontend
 - [ ] Vector DB memory to track issues across multiple analyses
 - [ ] GitHub Actions / CI integration (`code-review-action`)
 - [ ] Streaming analysis results via Server-Sent Events
