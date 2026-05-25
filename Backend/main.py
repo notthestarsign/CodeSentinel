@@ -1,4 +1,6 @@
 from pathlib import Path
+
+from fastapi.responses import FileResponse
 from groq import Groq
 import os
 import json
@@ -6,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI, File, HTTPException, Form, UploadFile
 import tempfile, zipfile, subprocess
+from report_generator import generate_pdf_report
 
 app = FastAPI(title="CodeSentinel", description="AI-Powered Code Review Assistant", version="1.0")
 
@@ -202,3 +205,18 @@ async def analyze_github(url: str = Form(...)):
         analysis = await analyze_with_ai(files)
         analysis["repo_url"] = url
         return analysis
+    
+@app.post("/report/pdf")
+async def generate_report(analysis: dict):
+    """Generate a PDF report from analysis data."""
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+        pdf_path = f.name
+ 
+    generate_pdf_report(analysis, pdf_path)
+ 
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename="code-review-report.pdf",
+        headers={"Access-Control-Expose-Headers": "Content-Disposition"}
+    )
