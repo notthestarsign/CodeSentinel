@@ -9,8 +9,15 @@ load_dotenv()
 from fastapi import FastAPI, File, HTTPException, Form, UploadFile
 import tempfile, zipfile, subprocess
 from report_generator import generate_pdf_report
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="CodeSentinel", description="AI-Powered Code Review Assistant", version="1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 SUPPORTED_EXTENSIONS = {
     '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.c', '.cpp', 
@@ -19,9 +26,9 @@ SUPPORTED_EXTENSIONS = {
     '.kt', '.vue', '.sql', '.sh', '.toml'
 }
 
-MAX_FILES = 30
+MAX_FILES = 15
 MAX_FILE_SIZE = 50_000
-MAX_TOTAL_CHARS = 80_000
+MAX_TOTAL_CHARS = 24000
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -49,7 +56,7 @@ def build_analysis_prompt(files: dict[str, str]) -> str:
     total = 0
     code_sections = []
     for filename, content in files.items():
-        snippet = content[:3000] if len(content) > 3000 else content
+        snippet = content[:1500] if len(content) > 1500 else content
         section = f"### FILE: {filename}\n```\n{snippet}\n```\n"
         if total + len(section) > MAX_TOTAL_CHARS:
             break
