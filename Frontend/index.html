@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  /* ── Reset & Base ─────────────────────────────────────── */
+  /*Reset & Base */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
@@ -38,7 +38,7 @@
     overflow-x: hidden;
   }
 
-  /* ── Background grid ───────────────────────────────────── */
+  /*Background grid  */
   body::before {
     content: '';
     position: fixed;
@@ -65,7 +65,7 @@
     z-index: 0;
   }
 
-  /* ── Layout ────────────────────────────────────────────── */
+  /*Layout */
   .wrapper {
     position: relative;
     z-index: 1;
@@ -74,7 +74,7 @@
     padding: 60px 24px 100px;
   }
 
-  /* ── Header ────────────────────────────────────────────── */
+  /*Header */
   header {
     text-align: center;
     margin-bottom: 64px;
@@ -117,7 +117,7 @@
     font-family: var(--mono);
   }
 
-  /* ── Input Panel ───────────────────────────────────────── */
+  /*Input Panel */
   .input-panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -245,7 +245,7 @@
     margin-top: 10px;
   }
 
-  /* ── Loading ───────────────────────────────────────────── */
+  /*Loading */
   #loading-panel {
     display: none;
     background: var(--surface);
@@ -293,7 +293,7 @@
   .dots span:nth-child(2) { animation-delay: 0.2s; }
   .dots span:nth-child(3) { animation-delay: 0.4s; }
 
-  /* ── Error ─────────────────────────────────────────────── */
+  /*Error */
   #error-panel {
     display: none;
     background: rgba(255, 75, 110, 0.08);
@@ -307,7 +307,7 @@
     animation: fadeUp 0.3s ease both;
   }
 
-  /* ── Results ───────────────────────────────────────────── */
+  /*Results */
   #results {
     display: none;
     animation: fadeUp 0.5s ease both;
@@ -706,7 +706,7 @@
     font-family: var(--mono);
   }
 
-  /* ── Animations ────────────────────────────────────────── */
+  /*Animations─ */
   @keyframes fadeDown {
     from { opacity: 0; transform: translateY(-16px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -726,7 +726,7 @@
     40% { opacity: 1; transform: scale(1.1); }
   }
 
-  /* ── Responsive ────────────────────────────────────────── */
+  /*Responsive */
   @media (max-width: 600px) {
     .scores-grid { grid-template-columns: repeat(2, 1fr); }
     .stats-row   { grid-template-columns: repeat(2, 1fr); }
@@ -867,7 +867,7 @@
     'Finalizing report…',
   ];
 
-  // ── Mode toggle ─────────────────────────────────────────────
+  //Mode toggle
   function setMode(mode) {
     document.getElementById('mode-upload').style.display = mode === 'upload' ? 'block' : 'none';
     document.getElementById('mode-github').style.display = mode === 'github' ? 'block' : 'none';
@@ -875,7 +875,7 @@
     document.getElementById('btn-github').classList.toggle('active', mode === 'github');
   }
 
-  // ── File drag & drop ────────────────────────────────────────
+  //File drag & drop
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
 
@@ -905,7 +905,7 @@
     document.getElementById('btn-analyze-upload').disabled = false;
   }
 
-  // ── Loading helpers ─────────────────────────────────────────
+  //Loading helpers
   function startLoading() {
     hideError();
     document.getElementById('input-panel').style.display = 'none';
@@ -948,7 +948,7 @@
     hideError();
   }
 
-  // ── API calls ───────────────────────────────────────────────
+  //API calls
   async function analyzeGithub() {
     const url = document.getElementById('github-url').value.trim();
     if (!url) return;
@@ -1013,7 +1013,7 @@
     }
   }
 
-  // ── Render results ───────────────────────────────────────────
+  //Render results
   function renderResults(data) {
     currentAnalysis = data;
 
