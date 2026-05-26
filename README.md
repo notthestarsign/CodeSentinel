@@ -6,11 +6,13 @@ warnings, and refactoring suggestions.
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| AI Analysis | Groq API · Llama 3.3 70B |
-| Backend API | Python · FastAPI · Uvicorn |
-| Repo cloning | Git (subprocess) |
+| Layer         | Technology                        |
+|---------------|-----------------------------------|
+| AI Analysis   | Groq API · Llama 3.3 70B          |
+| Backend API   | Python · FastAPI · Uvicorn        |
+| PDF Reports   | ReportLab                         |
+| Repo cloning  | Git (subprocess)                  |
+| Frontend      | HTML · CSS · Vanilla JS           |
 
 ---
 
@@ -40,14 +42,31 @@ Create a `.env` file inside `Backend/`:
 GROQ_API_KEY=gsk_...your_key_here...
 ```
 
-### 4. Start the server
+### 4. Start the backend
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+Or directly:
 
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-The API is now live at **http://localhost:8000**.  
-Interactive docs: **http://localhost:8000/docs**
+API live at **http://localhost:8000** · Docs at **http://localhost:8000/docs**
+
+### 5. Open the frontend
+
+In a second terminal:
+
+```bash
+cd Frontend
+python3 -m http.server 5500
+```
+
+Open **http://localhost:5500** in your browser.
 
 ---
 
@@ -77,6 +96,15 @@ curl -X POST http://localhost:8000/analyze/upload \
   -F "file=@myproject.zip"
 ```
 
+### `POST /report/pdf`
+Generate a PDF report from analysis JSON.
+```bash
+curl -X POST http://localhost:8000/report/pdf \
+  -H "Content-Type: application/json" \
+  -d @analysis.json \
+  --output report.pdf
+```
+
 ---
 
 ## Analysis Output
@@ -96,7 +124,7 @@ curl -X POST http://localhost:8000/analyze/upload \
     "warning_count": 5,
     "info_count": 2
   },
-  "tech_stack": ["Python", "FastAPI", "SQLite"],
+  "tech_stack": ["Python", "FastAPI"],
   "bug_risks": [ ... ],
   "security_concerns": [ ... ],
   "complexity_warnings": [ ... ],
@@ -108,15 +136,48 @@ curl -X POST http://localhost:8000/analyze/upload \
 
 ---
 
+## Project Structure
+
+```bash
+CodeSentinel/
+├── Backend/
+│   ├── main.py               # FastAPI app + endpoints
+│   ├── report_generator.py   # PDF report builder
+│   ├── requirements.txt      # Python dependencies
+│   ├── start.sh              # One-command startup script
+│   └── .env                  # Not committed — add your key here
+└── Frontend/
+└── index.html            # Single-file HTML/CSS/JS frontend
+```
+
+---
+
 ## Limits & Notes
 
-| Constraint | Value |
-|-----------|-------|
-| Max files per analysis | 30 |
-| Max file size | 50 KB per file |
-| Max total chars sent to AI | 80,000 |
-| Supported extensions | `.py .js .ts .jsx .tsx .java .c .cpp .h .cs .go .rb .php .html .css .scss .json .yaml .yml .md .txt .rs .swift .kt .vue .sql .sh .toml` |
-| GitHub repos | Public only (no auth) |
+| Constraint             | Value                                                                                                                                     |
+|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| Max files per analysis | 15                                                                                                                                        |
+| Max file size          | 50 KB per file                                                                                                                            |
+| Max total chars to AI  | 24,000                                                                                                                                    |
+| Max chars per file     | 1,500 (truncated)                                                                                                                         |
+| Supported extensions   | `.py .js .ts .jsx .tsx .java .c .cpp .h .cs .go .rb .php .html .css .scss .json .yaml .yml .md .txt .rs .swift .kt .vue .sql .sh .toml` |
+| GitHub repos           | Public only                                                                                                                               |
+
+> Limits are set conservatively for Groq's free tier (12,000 TPM).
+> Upgrade to Groq Dev tier or swap in a different provider to raise them.
+
+---
+
+## .gitignore
+
+Make sure your `.env` is never committed
+```bash
+.env
+venv/
+pycache/
+*.pyc
+*.pdf
+```
 
 ---
 
@@ -124,9 +185,8 @@ curl -X POST http://localhost:8000/analyze/upload \
 
 - [ ] GitHub OAuth + private repo support
 - [ ] Post review comments directly to Pull Requests via GitHub API
-- [ ] PDF report generation
-- [ ] React frontend
 - [ ] Vector DB memory to track issues across multiple analyses
-- [ ] GitHub Actions / CI integration (`code-review-action`)
+- [ ] GitHub Actions / CI integration
 - [ ] Streaming analysis results via Server-Sent Events
 - [ ] Side-by-side diff view for refactoring suggestions
+- [ ] Support for Anthropic / OpenAI as alternative providers
