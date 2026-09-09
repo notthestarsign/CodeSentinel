@@ -139,7 +139,7 @@ async def analyze_with_ai(files: dict[str, str]) -> dict:
     prompt = build_analysis_prompt(files)
 
     response = client.chat.completions.create(
-        model="qwen-qwq-32b",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=4000,
     )
