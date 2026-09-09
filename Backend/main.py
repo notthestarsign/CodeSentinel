@@ -139,7 +139,7 @@ async def analyze_with_ai(files: dict[str, str]) -> dict:
     prompt = build_analysis_prompt(files)
 
     response = client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="qwen-qwq-32b",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=4000,
     )
